@@ -96,7 +96,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
     # Main panel for modelling options ----
     mainPanel(
 
-      h2("Modelling Choices"),
+      h2("Modelling Selections"),
       p(glue("Select the modelling approach to fit the Time Activity Curves",
              " (TACs). You can select among different methods, either ",
              "compartmental models (e.g., 1TCM, 2TCM), and graphical models",
@@ -108,9 +108,9 @@ ui <- fluidPage(theme = shinytheme("flatly"),
 
       # Tabset
       tabsetPanel(type = "tabs",
-                  tabPanel("1TCM",
+                  tabPanel("Model",
                            # br(),
-                           h4("One-Tissue Compartment Model"),
+                           h4(""),
                            p(glue("There are not so many common models for the BPR. ",
                                   "When the BPR is clearly constant or linear, use ",
                                   "the relevant option. ",
@@ -122,148 +122,82 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                   "Hierarchical models are best left for experienced users.  "),
                              #style = "font-size:14px;"
                            ),
+                           # Model selection drop-down menu
+                           selectInput("button", "Select a model:", 
+                                       choices = c("1TCM", 
+                                                   "2TCM",
+                                                   "Logan",
+                                                   "Fit Delay",
+                                                   "t* finder"
+                                                   )),
+                           # 1TCM selection panel
+                           conditionalPanel(
+                             condition = "input.button == '1TCM'",
+                             fluidRow(
+                               column(3, offset = 0, numericInput("K1.start", "K1.start", value = 0.1,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("K1.lower", "K1.lower", value = 0.0001,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("K1.upper", "K1.upper", value = 0.5,min = 0, step=.001)),
+                             ),
+                             fluidRow(
+                               column(3, offset = 0, numericInput("k2.start", "k2.start", value = 0.1,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k2.lower", "k2.lower", value = 0.0001,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k2.upper", "k2.upper", value = 0.5,min = 0, step=.001)),
+                             ),
+                             fluidRow(
+                               column(3, offset = 0, numericInput("vB.start", "vB.start", value = 0.05, min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("vB.lower", "vB.lower", value = 0.01, min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("vB.upper", "vB.upper", value = 0.1, min = 0, step=.001)),
+                             ),
+                             checkboxInput("vB.fit", "Fit vB (otherwise use vB.start)", value = FALSE),
+                             
+                             
+                           ),
+                           # 2TCM selection panel
+                           conditionalPanel(
+                             condition = "input.button == '2TCM'",
+                             fluidRow(
+                               column(3, offset = 0, numericInput("K1.start", "K1.start", value = 0.1,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("K1.lower", "K1.lower", value = 0.0001,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("K1.upper", "K1.upper", value = 0.5,min = 0, step=.001)),
+                             ),
+                             fluidRow(
+                               column(3, offset = 0, numericInput("k2.start", "k2.start", value = 0.1,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k2.lower", "k2.lower", value = 0.0001,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k2.upper", "k2.upper", value = 0.5,min = 0, step=.001)),
+                             ),
+                             fluidRow(
+                               column(3, offset = 0, numericInput("k3.start", "k3.start", value = 0.1,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k3.lower", "k3.lower", value = 0.0001,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k3.upper", "k3.upper", value = 0.5,min = 0, step=.001)),
+                             ),
+                             fluidRow(
+                               column(3, offset = 0, numericInput("k4.start", "k4.start", value = 0.1,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k4.lower", "k4.lower", value = 0.0001,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k4.upper", "k4.upper", value = 0.5,min = 0, step=.001)),
+                             ),
+                             fluidRow(
+                               column(3, offset = 0, numericInput("vB.start", "vB.start", value = 0.05, min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("vB.lower", "vB.lower", value = 0.01, min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("vB.upper", "vB.upper", value = 0.1, min = 0, step=.001)),
+                             ),
+                             checkboxInput("vB.fit", "Fit vB (otherwise use vB.start)", value = FALSE)
+                           ),
+                           # Logan selection panel
+                           conditionalPanel(
+                             condition = "input.button == 'Logan'",
+                             numericInput("tstarIncludedFrames", "tstar", value = 10),
+                             checkboxInput("vB.fit", "Fit vB", value = FALSE)
+                           ),
                            
-                           selectInput(inputId = "bpr_model",
-                                       label = "BPR model",
-                                       choices=c("Interpolation",
-                                                 "Fit Individually: Constant",
-                                                 "Fit Individually: Linear",
-                                                 "Fit Individually: GAM",
-                                                 "Fit Hierarchically: HGAM"),
-                                       selected = "Interpolation",
-                                       multiple = FALSE),
-                           br(),
-                           h4("Time subsetting"),
-                           div(style="display:inline-block",textInput(inputId="bpr_starttime", label="from (min)", value = 0)),
-                           div(style="display:inline-block",textInput(inputId="bpr_endtime", label="to (min)", value = Inf)),
-                           br(),
-                           h4("Additional Modelling Options"),
-                           # p("GAM models may sometimes require k to be reduced, ",
-                           #      "and HGAM models require additional model specifications."),
-                           textInput(inputId = "bpr_k",
-                                     label = "GAM dimension of the basis (k)",
-                                     value = "6"),
-                           p(div(HTML("<em>This value must sometimes be reduced when there are too few data points, or increased for extra wiggliness.</em>")),
-                             style = "font-size:12px;"
-                           ),
-                           #br(),
-                           #h4("Additional HGAM Modelling Options"),
-                           #p(glue("If using a hierarchical modelling approach ",
-                           #      "these models require some additional model ",
-                           #      "specifications. Please define as appropriate.")),
-                           textInput(inputId = "bpr_hgam_opt",
-                                     label = "HGAM Smooth Formula",
-                                     value = ""),
-                           p(div(HTML("<em>Use any of the subsetting attributes, as well as measurement (pet), e.g. s(time, k=8) + s(time, pet, bs='fs', k=5)</em>")),
-                             #style = "font-size:12px;"
-                           )),
-
-                  tabPanel("2TCM",
-
-                           # br(),
-                           h4("Two-Tissue Compartmental Model (2TCM)"),
-                           p(glue("There are many options available for modelling the parent ",
-                                  "fraction. For most tracers, a good default option is the ",
-                                  "`Fit Individually: Choose the best-fitting model` option, ",
-                                  "which will choose the model which fits best on average, and ",
-                                  "applies that model to all of the data. ",
-                                  "Hierarchical models (more to come) are best left for experienced users.  "),
-                             #style = "font-size:14px;"
-                             ),
-
-                           selectInput(inputId = "pf_model",
-                                       label = "Parent fraction model",
-                                       choices=c("Interpolation",
-                                                 "Fit Individually: Choose the best-fitting model",
-                                                 "Fit Individually: Hill",
-                                                 "Fit Individually: Exponential",
-                                                 "Fit Individually: Power",
-                                                 "Fit Individually: Sigmoid",
-                                                 "Fit Individually: Inverse Gamma",
-                                                 "Fit Individually: Gamma",
-                                                 "Fit Individually: GAM",
-                                                 "Fit Hierarchically: HGAM"),
-                                                 #"Fit Hierarchically: NLME Hill",
-                                                 #"Fit Hierarchically: NLME Exponential",
-                                                 #"Fit Hierarchically: NLME Power",
-                                                 #"Fit Hierarchically: NLME Sigmoid",
-                                                 #"Fit Hierarchically: NLME Inverse Gamma",
-                                                 #"Fit Hierarchically: NLME Gamma"
-                                                 #),
-                                       selected = "Interpolation", multiple = FALSE),
-                           checkboxInput(inputId = "pf_set_t0",
-                                         label = "Set to 100% at time 0",
-                                         value = TRUE),
-                           #br(),
-                           h4("Time subsetting"),
-                           div(style="display:inline-block",textInput(inputId="pf_starttime", label="from (min)", value = 0)),
-                           div(style="display:inline-block",textInput(inputId="pf_endtime", label="to (min)", value = Inf)),
-                           br(),
-                           h4("Additional Modelling Options"),
-                           # p(glue("If using a hierarchical modelling approach ",
-                           #        "these models require some additional model ",
-                           #        "specifications. Please select as appropriate."),
-                             #style = "font-size:14px;"
-                             #),
-                           # textInput(inputId = "pf_nlme_opt",
-                           #             label = "NLME Random Effects",
-                           #             value = ""),
-                           # p(div(HTML("<em>e.g. a + b + c</em>")),
-                           #   #style = "font-size:12px;"
-                           #   ),
-                           #br(),
-                           textInput(inputId = "pf_k",
-                                     label = "GAM dimension of the basis (k)",
-                                     value = "6"),
-                           p(div(HTML("<em>This value must sometimes be reduced when there are too few data points, or increased for extra wiggliness.</em>")),
-                             style = "font-size:12px;"
-                           ),
-                           textInput(inputId = "pf_hgam_opt",
-                                     label = "HGAM Smooth Formula",
-                                     value = ""),
-                           p(div(HTML("<em>Use any of the subsetting attributes, as well as measurement (pet), e.g. s(time, k=8) + s(time, pet, bs='fs', k=5)</em>")),
-                             #style = "font-size:12px;"
-                             )
-                           ),
-
-                  tabPanel("Logan",
-                           # br(),
-                           h4("Logan Graphical Model"),
-                           p(glue("Models for the whole blood don't tend to make much difference. ",
-                                  "They are mostly useful when the blood measurements are very noisy, ",
-                                  "and when brain uptake is so low that the blood makes a big impact."),
-                             #style = "font-size:14px;"
-                             ),
-
-                           selectInput(inputId = "wb_model",
-                                       label = "Whole Blood model",
-                                       choices=c("Interpolation",
-                                                 "Fit Individually: Splines"),
-                                       selected = "Interpolation",
-                                       multiple = FALSE),
-                           # br(),
-                           checkboxInput(inputId = "wb_dispcor",
-                                         label = "Perform dispersion correction on autosampler samples?",
-                                         value = FALSE),
-                           h4("Time subsetting"),
-                           div(style="display:inline-block",textInput(inputId="wb_starttime", label="from (min)", value = 0)),
-                           div(style="display:inline-block",textInput(inputId="wb_endtime", label="to (min)", value = Inf)),
-                           br(),
-                           h4("Additional Spline Modelling Options"),
-                           p(glue("Depending on the number of samples, some of the ",
-                                  "k values may need to be reduced from their default ",
-                                  "of 10")),
-                           div(style="display:inline-block",textInput(inputId="wb_kb",   label="k before the peak", value = "")),
-                           div(style="display:inline-block",textInput(inputId="wb_ka_a", label="k after the peak (auto)", value = "")),
-                           div(style="display:inline-block",textInput(inputId="wb_ka_m", label="k after the peak (manual)", value = ""))),
-                  tabPanel("Download",
-                           # actionButton(inputId = "update",
-                           #              label = "Update"),
-                           downloadButton('downloadData', 'Download customised config file'),
-                           verbatimTextOutput("json_text")
-                           ),
+                           # t* finder
+                           conditionalPanel(
+                             condition = "input.button == 't* finder'",
+                             textInput(
+                               inputId = "binding_regions", label = "Low-, medium- and high-binding regions", value = ""),
+                           )
+                  ),
+                  tabPanel("Download",)
       )
-
     )
   )
 )
