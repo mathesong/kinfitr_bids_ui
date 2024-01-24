@@ -56,10 +56,26 @@ ui <- fluidPage(theme = shinytheme("flatly"),
 
     # Sidebar panel for inputs ----
     sidebarPanel(
-
-      # p("Once finished defining how each part of the data should be modelled, ",
-      #   "you can download ",
-      #   "the resulting config file by clicking the button below."),
+      h2("Select BIDS Dataset"),
+      fileInput("bidsdir", 
+                "Choose a BIDS directory", 
+                accept = "folder", 
+                multiple = F),
+      h2("Data Subset"),
+      p(glue("Use these options to apply this config to a subset of the data. ",
+             "Values should be separated by semi-colons. ",
+             "All measurements fulfilling all the conditions will ",
+             "be included. Leave options blank for no subsetting is desired, ",
+             "i.e. leaving sub blank implies that all subjects should ",
+             "be included."),
+        style = "font-size:14px;"
+      ),
+      br(),
+      textInput(inputId = "subset_sub", label = "sub", value = ""),
+      textInput(inputId = "subset_ses", label = "ses", value = ""),
+      textInput(inputId = "subset_rec", label = "rec", value = ""),
+      textInput(inputId = "subset_tracer", label = "TracerName", value = ""),
+      
       h2("Region"),
       p(glue("Use these options to define the region to which the model should ",
              "be applied. ",
@@ -74,22 +90,6 @@ ui <- fluidPage(theme = shinytheme("flatly"),
       textInput(inputId = "region_seg", label = "Description (desc) of tacs file (e.g. gtmseg)", value = ""),
       textInput(inputId = "region_deriv", label = "Derivative folder grob (e.g. petprep)", value = ""),
       br(),
-      h2("Data Subset"),
-      p(glue("Use these options to apply this config to a subset of the data. ",
-             "Values should be separated by semi-colons. ",
-             "All measurements fulfilling all the conditions will ",
-             "be included. Leave options blank for no subsetting is desired, ",
-             "i.e. leaving sub blank implies that all subjects should ",
-             "be included."),
-        style = "font-size:14px;"
-        ),
-      #br(),
-      textInput(inputId = "subset_sub", label = "sub", value = ""),
-      textInput(inputId = "subset_ses", label = "ses", value = ""),
-      textInput(inputId = "subset_rec", label = "rec", value = ""),
-      textInput(inputId = "subset_tracer", label = "TracerName", value = ""),
-
-      
 
     ),
 
@@ -194,6 +194,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                              p(glue("Please note that by inputting the regions above the Constituent Regions will be ignored."))
                            )
                   ),
+                  tabPanel("Results",),
                   tabPanel("Download",)
       )
     )
