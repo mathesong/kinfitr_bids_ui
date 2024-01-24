@@ -111,15 +111,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                   tabPanel("Model",
                            # br(),
                            h4(""),
-                           p(glue("There are not so many common models for the BPR. ",
-                                  "When the BPR is clearly constant or linear, use ",
-                                  "the relevant option. ",
-                                  "For most tracers, with a more complex function, ",
-                                  "a good default option is the ",
-                                  "`Fit Individually: GAM` option, ",
-                                  "which will fit a smooth generalised additive model ",
-                                  "to each curve independently. ",
-                                  "Hierarchical models are best left for experienced users.  "),
+                           p(glue(""),
                              #style = "font-size:14px;"
                            ),
                            # Model selection drop-down menu
@@ -180,7 +172,8 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                column(3, offset = 0, numericInput("vB.lower", "vB.lower", value = 0.01, min = 0, step=.001)),
                                column(3, offset = 0, numericInput("vB.upper", "vB.upper", value = 0.1, min = 0, step=.001)),
                              ),
-                             checkboxInput("vB.fit", "Fit vB (otherwise use vB.start)", value = FALSE)
+                             checkboxInput("vB.fit", "Fit vB (otherwise use vB.start)", value = FALSE),
+                             checkboxInput("irreversible_trapping", "Use irreversible trapping (k4 start, lower and upper set to 0)")
                            ),
                            # Logan selection panel
                            conditionalPanel(
@@ -193,7 +186,12 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                            conditionalPanel(
                              condition = "input.button == 't* finder'",
                              textInput(
-                               inputId = "binding_regions", label = "Low-, medium- and high-binding regions", value = ""),
+                               inputId = "low.binding", label = "Low-binding region", value = ""),
+                             textInput(
+                               inputId = "medium.binding", label = "Medium-binding region", value = ""),
+                             textInput(
+                               inputId = "high.binding", label = "High-binding region", value = ""),
+                             p(glue("Please note that by inputting the regions above the Constituent Regions will be ignored."))
                            )
                   ),
                   tabPanel("Download",)
