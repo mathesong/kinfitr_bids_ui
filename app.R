@@ -16,6 +16,9 @@ library(tibble)
 library(dplyr)
 library(purrr)
 library(jsonlite)
+require(shinyFiles)
+require(shiny.fluent)
+
 
 # New filename
 generate_new_filename <- function() {
@@ -38,29 +41,44 @@ json_files <- tibble::tibble(
 file.remove(json_files$filename[json_files$Days_ago > 7])
 
 
+## BIDS Navigator Helper Functions
+available_region_files <- function(bids_derivativedir){
+  # Navigate the derivative folder and select the file with segmentation names
+  available_files <- list.dirs(path = bids_derivativedir,
+                               pattern = regex("_tacs\\.tsv$|_desg\\.tsv"),
+                               recursive = TRUE,
+                               no.. = FALSE)
+  return(available_files)
+}
 
+tac_region_names <- function(file_with_names){
+  region_names <- readr::read_tsv(file_with_names)
+  if(stringr::str_ends(file_with_names, "_dseg.tsv")){
+    regions_list <- region_names$name
+  }else if(stringr::str_ends(file_with_names, "_tacs.tsv")){
+    regions_list <- colnames(region_names)
+  }
+  return(regions_list)
+}
 
 # Define UI for bloodstream app ----
 ui <- fluidPage(theme = shinytheme("flatly"),
 
-  # theme = bs_theme(version = 4, bootswatch = "cosmo",
-  #                  #bg = "#0b3d91",
-  #                  #fg = "white"
-  #                  ),
-
   # App title ----
   titlePanel("Create a customised kinfitr BIDS App config file"),
 
-  # Sidebar layout for subsetting ----
+  # Sidebar layout for BIDS datset subsetting ----
   sidebarLayout(
 
     # Sidebar panel for inputs ----
     sidebarPanel(
       h2("Select BIDS Dataset"),
-      fileInput("bidsdir", 
-                "Choose a BIDS directory", 
-                accept = "folder", 
-                multiple = F),
+      shinyDirButton("bidsdir", 
+                     label = "Browse to choose a BIDS folder",
+                     title = "Choose a folder",
+                     buttonType = "primary",
+                     multiple = FALSE,
+                     class = "btn-block"),
       h2("Data Subset"),
       p(glue("Use these options to apply this config to a subset of the data. ",
              "Values should be separated by semi-colons. ",
@@ -86,9 +104,9 @@ ui <- fluidPage(theme = shinytheme("flatly"),
         style = "font-size:14px;"
       ),
       textInput(inputId = "region_name", label = "Region outputname (e.g. Hippocampus)", value = ""),
-      textInput(inputId = "region_regions", label = "Constituent Regions (e.g. L_HIP,R_HIP)", value = ""),
-      textInput(inputId = "region_seg", label = "Description (desc) of tacs file (e.g. gtmseg)", value = ""),
-      textInput(inputId = "region_deriv", label = "Derivative folder grob (e.g. petprep)", value = ""),
+      ComboBox.shinyInput(inputId = "region_regions", label = "Constituent Regions (e.g. L_HIP,R_HIP)", value = "", multiSelectDelimiter = ",",allowFreeform = TRUE),
+      ComboBox.shinyInput(inputId = "region_seg", label = "Description (desc) of tacs file (e.g. gtmseg)", value = "",allowFreeform = FALSE),
+      ComboBox.shinyInput(inputId = "region_deriv", label = "Derivative folder grob (e.g. petprep)", value = "", allowFreeform = FALSE),
       br(),
 
     ),
@@ -101,19 +119,17 @@ ui <- fluidPage(theme = shinytheme("flatly"),
              " (TACs). You can select among different methods, either ",
              "compartmental models (e.g., 1TCM, 2TCM), and graphical models",
              "(e.g., Logan) to fit your data. Data to be fitted are exepcted to",
-             " be derived from a  "),
+             " be derived from a BIDS folder. You can fit up to three models ",
+             "on your regional data."),
         style = "font-size:14px;"
         ),
       br(),
 
       # Tabset
       tabsetPanel(type = "tabs",
-                  tabPanel("Model",
+                  tabPanel("Model 1",
                            # br(),
                            h4(""),
-                           p(glue(""),
-                             #style = "font-size:14px;"
-                           ),
                            # Model selection drop-down menu
                            selectInput("button", "Select a model:", 
                                        choices = c("1TCM", 
@@ -124,7 +140,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                                    )),
                            # 1TCM selection panel
                            conditionalPanel(
-                             condition = "input.button == '1TCM'",
+                             condition = "input[['button']] == '1TCM'",
                              fluidRow(
                                column(3, offset = 0, numericInput("K1.start", "K1.start", value = 0.1,min = 0, step=.001)),
                                column(3, offset = 0, numericInput("K1.lower", "K1.lower", value = 0.0001,min = 0, step=.001)),
@@ -146,7 +162,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                            ),
                            # 2TCM selection panel
                            conditionalPanel(
-                             condition = "input.button == '2TCM'",
+                             condition = "input[['button']] == '2TCM'",
                              fluidRow(
                                column(3, offset = 0, numericInput("K1.start", "K1.start", value = 0.1,min = 0, step=.001)),
                                column(3, offset = 0, numericInput("K1.lower", "K1.lower", value = 0.0001,min = 0, step=.001)),
@@ -177,14 +193,14 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                            ),
                            # Logan selection panel
                            conditionalPanel(
-                             condition = "input.button == 'Logan'",
+                             condition = "input[['button']] == 'Logan'",
                              numericInput("tstarIncludedFrames", "tstar", value = 10),
                              checkboxInput("vB.fit", "Fit vB", value = FALSE)
                            ),
                            
                            # t* finder
                            conditionalPanel(
-                             condition = "input.button == 't* finder'",
+                             condition = "input[['button']] == 't* finder'",
                              textInput(
                                inputId = "low.binding", label = "Low-binding region", value = ""),
                              textInput(
@@ -194,8 +210,16 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                              p(glue("Please note that by inputting the regions above the Constituent Regions will be ignored."))
                            )
                   ),
-                  tabPanel("Results",),
-                  tabPanel("Download",)
+                  tabPanel("Model 2",),
+                  tabPanel("Model 3",),
+                  tabPanel("Download",
+                           br(),
+                           h3("Download kinfitr config files"),
+                           fluidRow(
+                             column(3, downloadButton("model1_config", "Download Model 1 config")),
+                             column(3, downloadButton("model2_config", "Download Model 2 config")),
+                             column(3, downloadButton("model3_config", "Download Model 3 config"))
+                           ))
       )
     )
   )
@@ -203,19 +227,42 @@ ui <- fluidPage(theme = shinytheme("flatly"),
 
 # Define server logic for config file creation ----
 server <- function(input, output, session) {
-  
+  # Loading of BIDS directory and dynamic loading of the bids structure
+  # TODO: load the directory and parse subfolders
+  # TODO: find the _tacs.tsv file and load the structure
+  # TODO: display amongst the available regions ONLY those in that specific file
+  roots <- c('wd' = getwd(),'~', getVolumes())
+  reactive(
+  shinyDirChoose(input,
+                 'rootfolder',
+                 roots = roots,
+                 allowDirCreate = FALSE),
+  # bidsdir <- "",  # TODO: get the folder from the shinyDirChoose
+  # Get the derivatives folder from the BIDS folder
+  # derivatives_folder <- list.dirs(bidsdir, 
+  #                                 pattern = "derivatives", 
+  #                                 recursive = FALSE),
+  # # User select the desired folder
+  # 
+  # # Get the available segmentation files
+  # avail_seg <- available_region_files(derivatives_folder),
+  # 
+  # # User select file
+  # seg_file <- "",
+  # # Get region names
+  # avail_rois <- tac_region_names(seg_file)
+  )
   # Reactive model based logic ----
-  model_parameters <- observe(
+  model1_parameters <- observe(
   
   if(input$button == "1TCM"){
-    # Check for required fields
     
     
   }
-  else if(input$button == "2TCM"){
+  else if(input[["button"]] == "2TCM"){
     observeEvent(input$irreversible_trapping,
                  {
-                   if(input$irreversible_trapping){
+                   if(input[["irreversible_trapping"]]){
                      updateNumericInput(session, inputId = "k4.start", value = 0, min = 0, max = 0, step = 0)
                      updateNumericInput(session, inputId = "k4.lower", value = 0, min = 0, max = 0, step = 0)
                      updateNumericInput(session, inputId = "k4.upper", value = 0, min = 0, max = 0, step = 0)
@@ -225,14 +272,15 @@ server <- function(input, output, session) {
                      updateNumericInput(session, inputId = "k4.upper", value = 0.5, min = 0, max = 0, step = 0.001)
                    }
                  })
+    # Parameters for the model to use for data fitting
   }
-  else if(input$button == "Logan"){
+  else if(input[["button"]] == "Logan"){
     
   }
-  else if(input$button == "t* finder"){
+  else if(input[["button"]] == "t* finder"){
     
   }
-  else if(input$button == "Fit Delay"){
+  else if(input[["button"]] == "Fit Delay"){
     
   })
   
