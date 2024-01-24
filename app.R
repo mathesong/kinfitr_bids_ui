@@ -164,7 +164,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                              ),
                              fluidRow(
                                column(3, offset = 0, numericInput("k4.start", "k4.start", value = 0.1,min = 0, step=.001)),
-                               column(3, offset = 0, numericInput("k4.lower", "k4.lower", value = 0.0001,min = 0, step=.001)),
+                               column(3, offset = 0, numericInput("k4.lower", "k4.lower", value = 0.0001,min = 0, step=.0001)),
                                column(3, offset = 0, numericInput("k4.upper", "k4.upper", value = 0.5,min = 0, step=.001)),
                              ),
                              fluidRow(
@@ -201,94 +201,42 @@ ui <- fluidPage(theme = shinytheme("flatly"),
 )
 
 # Define server logic for config file creation ----
-server <- function(input, output) {
-
-  # Reactive expression to generate the config file ----
-
-  config_json <- reactive({
-
-    Subsets <- list(
-      sub = input$subset_sub,
-      ses = input$subset_ses,
-      rec = input$subset_rec,
-      task = input$subset_task,
-      run = input$subset_run,
-      TracerName = input$subset_tracer,
-      ModeOfAdministration = input$subset_modeadmin,
-      InstitutionName = input$subset_institute,
-      PharmaceuticalName = input$subset_pharmaceutical
-    )
-
-    ParentFraction <- list(
-      Method = input$pf_model,
-      set_ppf0 = input$pf_set_t0,
-      starttime = as.numeric(input$pf_starttime),
-      endtime  = as.numeric(input$pf_endtime),
-      #nlme_re = input$pf_nlme_opt,
-      gam_k = input$pf_k,
-      hgam_formula = input$pf_hgam_opt
-    )
-
-    BPR <- list(
-      Method = input$bpr_model,
-      starttime = as.numeric(input$bpr_starttime),
-      endtime  = as.numeric(input$bpr_endtime),
-      gam_k = as.numeric(input$bpr_k),
-      hgam_formula = input$bpr_hgam_opt
-    )
-
-    AIF <- list(
-      Method = input$aif_model,
-      starttime = as.numeric(input$aif_starttime),
-      endtime  = as.numeric(input$aif_endtime),
-      expdecay_props = as.numeric(c(input$aif_expdecay_1,
-                         input$aif_expdecay_2)),
-      inftime = as.numeric(str_split(input$aif_inftime, pattern = ";")[[1]]),
-      spline_kb = input$aif_kb,
-      spline_ka_m = input$aif_ka_m,
-      spline_ka_a = input$aif_ka_a
-    )
-
-    WholeBlood <- list(
-      Method = input$wb_model,
-      dispcor = input$wb_dispcor,
-      starttime = as.numeric(input$wb_starttime),
-      endtime  = as.numeric(input$wb_endtime),
-      spline_kb = input$wb_kb,
-      spline_ka_m = input$wb_ka_m,
-      spline_ka_a = input$wb_ka_a
-    )
-
-    config_list <- list(
-      Subsets = Subsets,
-      Model = list(
-        ParentFraction = ParentFraction,
-        BPR = BPR,
-        AIF = AIF,
-        WholeBlood = WholeBlood
-      )
-    )
-
-    jsonlite::toJSON(config_list, pretty=T)
+server <- function(input, output, session) {
+  
+  # Reactive model based logic ----
+  model_parameters <- observe(
+  
+  if(input$button == "1TCM"){
+    # Check for required fields
+    
+    
+  }
+  else if(input$button == "2TCM"){
+    observeEvent(input$irreversible_trapping,
+                 {
+                   if(input$irreversible_trapping){
+                     updateNumericInput(session, inputId = "k4.start", value = 0, min = 0, max = 0, step = 0)
+                     updateNumericInput(session, inputId = "k4.lower", value = 0, min = 0, max = 0, step = 0)
+                     updateNumericInput(session, inputId = "k4.upper", value = 0, min = 0, max = 0, step = 0)
+                   } else {
+                     updateNumericInput(session, inputId = "k4.start", value = 0.1, min = 0, max = 0, step = 0.001)
+                     updateNumericInput(session, inputId = "k4.lower", value = 0.0001, min = 0, max = 0, step = 0.0001)
+                     updateNumericInput(session, inputId = "k4.upper", value = 0.5, min = 0, max = 0, step = 0.001)
+                   }
+                 })
+  }
+  else if(input$button == "Logan"){
+    
+  }
+  else if(input$button == "t* finder"){
+    
+  }
+  else if(input$button == "Fit Delay"){
+    
   })
-
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      generate_new_filename()
-    },
-    content = function(con) {
-      writeLines(text = config_json(),
-                 con = con)
-    }
-  )
-
-  # config_jsonfile <- reactive({
-  #   jsonlite::write_json( x = config_json(),
-  #                         path = paste0("output/", out_filename) )
-  # })
-
-  output$json_text <- renderText( { config_json() } )
+  
 
 }
-# Run the application
+
+# Run the application ----
 shinyApp(ui = ui, server = server)
