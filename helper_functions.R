@@ -16,6 +16,7 @@ library(tibble)
 library(dplyr)
 library(purrr)
 library(jsonlite)
+require(shinyjs)
 require(shinyFiles)
 require(shiny.fluent)
 
@@ -117,10 +118,10 @@ ui <- fluidPage(theme = shinytheme("flatly"),
       h2("Modelling Selections"),
       p(glue("Select the modelling approach to fit the Time Activity Curves",
              " (TACs). You can select among different methods, either ",
-             "compartmental models (e.g., 1TCM, 2TCM), and graphical models",
+             "compartmental models (e.g., 1TCM, 2TCM), and graphical models ",
              "(e.g., Logan) to fit your data. Data to be fitted are exepcted to",
-             " be derived from a BIDS folder. You can fit up to three models ",
-             "on your regional data."),
+             " be derived from a BIDS folder."),
+        h6("You can fit up to three models on your regional data."),
         style = "font-size:14px;"
         ),
       br(),
@@ -201,13 +202,12 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                            # t* finder
                            conditionalPanel(
                              condition = "input[['button']] == 't* finder'",
-                             textInput(
+                             ComboBox.shinyInput(
                                inputId = "low.binding", label = "Low-binding region", value = ""),
-                             textInput(
+                             ComboBox.shinyInput(
                                inputId = "medium.binding", label = "Medium-binding region", value = ""),
-                             textInput(
-                               inputId = "high.binding", label = "High-binding region", value = ""),
-                             p(glue("Please note that by inputting the regions above the Constituent Regions will be ignored."))
+                             ComboBox.shinyInput(
+                               inputId = "high.binding", label = "High-binding region", value = "")
                            )
                   ),
                   tabPanel("Model 2",),
@@ -215,6 +215,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                   tabPanel("Download",
                            br(),
                            h3("Download kinfitr config files"),
+                           # Only one download button! 
                            fluidRow(
                              column(3, downloadButton("model1_config", "Download Model 1 config")),
                              column(3, downloadButton("model2_config", "Download Model 2 config")),
@@ -231,13 +232,28 @@ server <- function(input, output, session) {
   # TODO: load the directory and parse subfolders
   # TODO: find the _tacs.tsv file and load the structure
   # TODO: display amongst the available regions ONLY those in that specific file
-  roots <- c('wd' = getwd(),'~', getVolumes())
-  reactive(
-  shinyDirChoose(input,
-                 'rootfolder',
-                 roots = roots,
-                 allowDirCreate = FALSE),
-  # bidsdir <- "",  # TODO: get the folder from the shinyDirChoose
+  roots <- c('wd' = getwd())
+  volumes <- shinyDirChoose(input, "bidsdir", 
+                            roots=roots, 
+                            allowDirCreate = FALSE)
+  
+  output$dirOutput <- renderPrint({
+    req(input$dir)
+    
+    # Get the selected directory path
+    selected_dir <- parseDirPath(volumes, input$dir)
+    
+    # List all directories within the selected directory
+    if (!is.null(selected_dir$datapath)) {
+      dirs <- list.dirs(path = selected_dir$datapath, 
+                        full.names = TRUE, 
+                        recursive = TRUE)
+      return(dirs)
+    } else {
+      return(NULL)
+    }
+  })
+  
   # Get the derivatives folder from the BIDS folder
   # derivatives_folder <- list.dirs(bidsdir, 
   #                                 pattern = "derivatives", 
@@ -251,7 +267,7 @@ server <- function(input, output, session) {
   # seg_file <- "",
   # # Get region names
   # avail_rois <- tac_region_names(seg_file)
-  )
+
   # Reactive model based logic ----
   model1_parameters <- observe(
   
@@ -260,7 +276,7 @@ server <- function(input, output, session) {
     
   }
   else if(input[["button"]] == "2TCM"){
-    observeEvent(input$irreversible_trapping,
+    observeEvent(input[["irreversible_trapping"]],
                  {
                    if(input[["irreversible_trapping"]]){
                      updateNumericInput(session, inputId = "k4.start", value = 0, min = 0, max = 0, step = 0)
